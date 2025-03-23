@@ -27,10 +27,13 @@ alph = list(".abcdefghijklmnopqrstuvwxyz")
 
 examplesCount = 0
 
+gramSize = 5
+embDim = 10
+
 for name in names:
-    name = "..." + name + "."
-    for index in range(3, len(name)):
-        context = [alph.index(x) for x in list(name[index-3:index])]
+    name = "." * gramSize + name + "."
+    for index in range(gramSize, len(name)):
+        context = [alph.index(x) for x in list(name[index-gramSize:index])]
         res = alph.index(name[index])
 
         x.append(context)
@@ -38,35 +41,37 @@ for name in names:
 
 examplesCount = len(x)
 
+g = torch.Generator().manual_seed(2147483647)
+
 x = torch.tensor(x)
 y = torch.tensor(y)
 
 # creating all the params
-c = torch.randn((27,2))
+c = torch.randn((27,embDim), generator=g)
 
 # creating hidden layer weights
-wh = torch.randn((6, 100))
-bh = torch.randn(100)
+wh = torch.randn((gramSize*embDim, 100), generator=g)
+bh = torch.randn(100, generator=g)
 
 # creating output layer
-wo = torch.randn((100, 27))
-bo = torch.randn(27)
+wo = torch.randn((100, 27), generator=g)
+bo = torch.randn(27, generator=g)
 
 params = [c, wh, bh, wo, bo]
 
 for p in params:
     p.requires_grad = True
 
-examplesCount = 320
+examplesCount = 32
 
 # training the model
-for i in range(20000):
-    minibatch = torch.randint(0, x.shape[0], (examplesCount,))
+for i in range(200000):
+    minibatch = torch.randint(0, x.shape[0], (examplesCount,), generator=g)
 
     emb = c[x[minibatch]]
 
     # calculating the hidden layer
-    h = torch.tanh(emb.view(-1, 6) @ wh + bh)
+    h = torch.tanh(emb.view(-1, gramSize*embDim) @ wh + bh)
 
     # calculating the output layer
     logits = h @ wo + bo
@@ -74,28 +79,31 @@ for i in range(20000):
     prob = counts / counts.sum(1, keepdim=True)
 
     loss = -prob[torch.arange(examplesCount), y[minibatch]].log().mean()
+
+    if loss.data < 1.5:
+        break
     
     for p in params:
         p.grad = None
     
     loss.backward()
 
-    delta = 0.3 if i < 100 else 0.1
+    delta = 0.08 if i < 100000 else 0.008
     for p in params:
         p.data -= delta * p.grad
         
 print(loss)
 
 # sampling from the model
-for _ in range(5):
-    word = "..."
+for _ in range(50):
+    word = "."*gramSize
 
-    while word[-1] != "." or len(word) == 3:
-        context = [alph.index(x) for x in list(word[-3:-1] + word[-1])]
+    while word[-1] != "." or len(word) == gramSize:
+        context = [alph.index(x) for x in list(word[-gramSize:-1] + word[-1])]
         emb = c[context]   
 
         # calculating the hidden layer
-        h = torch.tanh(emb.view(-1, 6) @ wh + bh)
+        h = torch.tanh(emb.view(-1, gramSize*embDim) @ wh + bh)
 
         # calculating the output layer
         logits = h @ wo + bo
@@ -105,8 +113,8 @@ for _ in range(5):
         nextLetter = torch.multinomial(prob, 1)
         word += alph[nextLetter]
 
-    print(word[3:])
+    print(word[gramSize:])
 
-vis()
+# vis()
 
 
