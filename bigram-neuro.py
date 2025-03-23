@@ -28,8 +28,7 @@ trainingData = torch.tensor(trainingData)
 evalData = torch.tensor(evalData)
 
 # initialize the network
-generator = torch.Generator().manual_seed(2147483647)
-weights = torch.randn((alphLen, alphLen), generator=generator, requires_grad=True)
+weights = torch.randn((alphLen, alphLen), generator=None, requires_grad=True)
 
 
 
@@ -41,7 +40,6 @@ for i in range(1, 100):
     
     counts = logits.exp()
 
-    # preditions = torch.tensor([[(item / row.sum()).item() for item in row] for row in counts], requires_grad=True)
     preditions = counts / counts.sum(dim=1, keepdim=True)
     
     # calculate the loss function
@@ -52,10 +50,9 @@ for i in range(1, 100):
     # do the backpath for the loss function
     loss.backward()
 
-    grad = weights.grad
-
     # actually tune the weights
     weights.data -= 0.1 * weights.grad
+    
     
 # inference :)
 for _ in range(500):
@@ -75,6 +72,7 @@ for _ in range(500):
 
         maxPredictionIndex = torch.multinomial(preditions, 1, replacement=False, generator=None, out=None)
         #preditions.tolist()[0].index(preditions.max())
+        
         letter = alph[maxPredictionIndex]
         out += letter
     print(out)
