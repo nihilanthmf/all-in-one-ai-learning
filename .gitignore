@@ -1,2 +1,4 @@
 pytorch_env
-sentences.txt
+/archive/sentences.txt
+/archive/train.txt
+/archive/train.json

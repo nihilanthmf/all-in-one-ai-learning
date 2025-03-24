@@ -1,5 +1,7 @@
+import math
 import torch
 import matplotlib.pyplot as plt
+import json
 
 def vis():
     # visualize dimensions 0 and 1 of the embedding matrix C for all characters
@@ -13,11 +15,11 @@ def vis():
 
 
 # opening the names file and reading its data
-namesFile = open("sentences.txt", "r")
+file = open("output.txt", "r")
 
-sentences = namesFile.read().splitlines()[:50000]
+sentences = [x.replace(',', "").replace('.', "").replace('!', "").replace('?', "").replace('(', "").replace(')', "") for x in file.read().splitlines()]
 
-namesFile.close()
+file.close()
 
 # creating a dataset of trigrams 
 x = [] # input to the NN
@@ -25,33 +27,17 @@ y = [] # expected output
 
 examplesCount = 0
 
-gramSize = 3
-embDim = 2
+gramSize = 10
+embDim = 20
 
-dictionary = ["<"]
-for word in " ".join(sentences).split():
-    dictionary.append(word)
+dict_json = open('dict.json', 'r')
+dictionary = json.loads(dict_json.read())
 
-print('dict created!')
+x_json = open('xs.json', 'r')
+x = json.loads(x_json.read())
 
-dictionary = list(set(dictionary))
-
-i=0
-for sentence in sentences:
-    sentence = "< " * gramSize + sentence + " <"
-    sentence = sentence.split()
-
-    i+=1
-    print(i)
-
-    for index in range(gramSize, len(sentence)):
-        context = [dictionary.index(x) for x in list(sentence[index-gramSize:index])]
-        res = dictionary.index(sentence[index])
-
-        x.append(context)
-        y.append(res)
-
-examplesCount = len(x)
+y_json = open('ys.json', 'r')
+y = json.loads(y_json.read())
 
 g = torch.Generator().manual_seed(2147483647)
 
@@ -62,11 +48,11 @@ y = torch.tensor(y)
 c = torch.randn((len(dictionary),embDim), generator=g)
 
 # creating hidden layer weights
-wh = torch.randn((gramSize*embDim, 100), generator=g)
-bh = torch.randn(100, generator=g)
+wh = torch.randn((gramSize*embDim, 200), generator=g)
+bh = torch.randn(200, generator=g)
 
 # creating output layer
-wo = torch.randn((100, len(dictionary)), generator=g)
+wo = torch.randn((200, len(dictionary)), generator=g)
 bo = torch.randn(len(dictionary), generator=g)
 
 params = [c, wh, bh, wo, bo]
@@ -74,12 +60,38 @@ params = [c, wh, bh, wo, bo]
 for p in params:
     p.requires_grad = True
 
-examplesCount = 320
+examplesCount = 100
+loss = None
 
-print('started training')
+def sample(numofwords):
+    # sampling from the model
+    for _ in range(numofwords):
+        sent = ("* "*gramSize).split()
+
+        while sent[-1] != "*" or len(sent) == gramSize:
+            context = [dictionary.index(x) for x in sent[-gramSize:]]
+            emb = c[context]
+
+            # calculating the hidden layer
+            h = torch.tanh(emb.view(-1, gramSize*embDim) @ wh + bh)
+
+            # calculating the output layer
+            logits = h @ wo + bo
+            counts = logits.exp()
+            prob = counts / counts.sum(1, keepdim=True)
+
+            nextWord = torch.multinomial(prob, 1)
+            sent.append(dictionary[nextWord])
+
+            # if len(sent) > 50:
+            #     sent.append("*")
+
+
+        print(" ".join(sent[gramSize:]))
+        print("---------")
 
 # training the model
-for i in range(10000):
+for i in range(30000):
     minibatch = torch.randint(0, x.shape[0], (examplesCount,), generator=g)
 
     emb = c[x[minibatch]]
@@ -89,46 +101,29 @@ for i in range(10000):
 
     # calculating the output layer
     logits = h @ wo + bo
-    counts = logits.exp()
-    prob = counts / counts.sum(1, keepdim=True)
+    # counts = logits.exp()
+    # prob = counts / counts.sum(1, keepdim=True)
 
-    loss = -prob[torch.arange(examplesCount), y[minibatch]].log().mean()
+    # loss = -prob[torch.arange(examplesCount), y[minibatch]].log().mean()
+
+    loss = torch.nn.functional.cross_entropy(logits, y[minibatch])
 
     if i % 1000 == 0:
-        print(loss)
+        print(f"Loss after {i} iterations is {loss.data}")
+        sample(1)
     
     for p in params:
         p.grad = None
     
     loss.backward()
 
-    delta = 0.1 if i < 10000 else 0.1
+    delta = 0.15 if i < 10000 else 0.1
     for p in params:
         p.data -= delta * p.grad
         
-print(loss)
+print("Final loss = ", loss)
 
-# sampling from the model
-for _ in range(5):
-    sent = ("< "*gramSize).split()
 
-    while sent[-1] != "<" or len(sent) == gramSize:
-        context = [dictionary.index(x) for x in sent[-gramSize:]]
-        emb = c[context]   
-
-        # calculating the hidden layer
-        h = torch.tanh(emb.view(-1, gramSize*embDim) @ wh + bh)
-
-        # calculating the output layer
-        logits = h @ wo + bo
-        counts = logits.exp()
-        prob = counts / counts.sum(1, keepdim=True)
-
-        nextWord = torch.multinomial(prob, 1)
-        sent.append(dictionary[nextWord])
-
-    print(" ".join(sent[gramSize:]))
-    print("---------")
 # vis()
-
+sample(10)
 
