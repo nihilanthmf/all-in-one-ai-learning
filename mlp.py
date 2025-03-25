@@ -74,6 +74,7 @@ for i in range(200000):
     h = torch.tanh(emb.view(-1, gramSize*embDim) @ wh + bh)
 
     # calculating the output layer
+    print(h.shape, wo.shape)
     logits = h @ wo + bo
     counts = logits.exp()
     prob = counts / counts.sum(1, keepdim=True)
