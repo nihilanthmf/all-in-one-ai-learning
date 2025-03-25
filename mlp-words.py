@@ -48,11 +48,11 @@ y = torch.tensor(y)
 c = torch.randn((len(dictionary),embDim), generator=g)
 
 # creating hidden layer weights
-wh = torch.randn((gramSize*embDim, 100), generator=g)
-bh = torch.randn(100, generator=g)
+wh = torch.randn((gramSize*embDim, 200), generator=g)
+bh = torch.randn(200, generator=g)
 
 # creating output layer
-wo = torch.randn((100, len(dictionary)), generator=g)
+wo = torch.randn((200, len(dictionary)), generator=g)
 bo = torch.randn(len(dictionary), generator=g)
 
 params = [c, wh, bh, wo, bo]
@@ -60,7 +60,7 @@ params = [c, wh, bh, wo, bo]
 for p in params:
     p.requires_grad = True
 
-examplesCount = 32
+examplesCount = 100
 loss = None
 
 def sample(numofwords):
@@ -83,15 +83,15 @@ def sample(numofwords):
             nextWord = torch.multinomial(prob, 1)
             sent.append(dictionary[nextWord])
 
-            # if len(sent) > 50:
-            #     sent.append("*")
+            if len(sent) > 500:
+                sent.append("*")
 
 
         print(" ".join(sent[gramSize:]))
         print("---------")
 
 # training the model
-for i in range(30000):
+for i in range(50000):
     minibatch = torch.randint(0, x.shape[0], (examplesCount,), generator=g)
 
     emb = c[x[minibatch]]
@@ -108,8 +108,9 @@ for i in range(30000):
 
     loss = torch.nn.functional.cross_entropy(logits, y[minibatch])
 
-    if i % 1 == 0:
+    if i % 1000 == 0:
         print(f"Loss after {i} iterations is {loss.data}")
+        # print(params)
         sample(1)
     
     for p in params:
@@ -117,7 +118,7 @@ for i in range(30000):
     
     loss.backward()
 
-    delta = 0.15 if i < 10000 else 0.1
+    delta = 0.2 if i < 6000 else 0.075
     for p in params:
         p.data -= delta * p.grad
         
