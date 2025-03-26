@@ -2,4 +2,4 @@ pytorch_env
 /archive/sentences.txt
 /archive/train.txt
 /archive/train.json
-output.txt
+mlp-words/output.txt
