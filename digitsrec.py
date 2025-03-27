@@ -68,8 +68,6 @@ params = [wh, bh, wo, bo]
 for p in params:
     p.requires_grad = True
 
-torch.autograd.set_detect_anomaly(True)
-
 
 
 # training the network

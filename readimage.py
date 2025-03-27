@@ -1,6 +1,6 @@
 from PIL import Image
 
-im = Image.open('two.jpg') # Can be many different formats.
+im = Image.open('two.jpg')
 pix_val = list(im.getdata())
 print(pix_val)
 res = []
