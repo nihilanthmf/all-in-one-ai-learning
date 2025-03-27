@@ -1,9 +1,20 @@
 import torch
 import csv
+import random
+
+# loss
+# 0.4032
+# 1.1678 - 500 neurons
+# 0.3626 - 100 neurons
+# 0.4456 - 150 neurons
+# 0.3513 - 50 neurons
+# 0.3767 - 25 neurons
+# 0.3835 - 75 neurons
 
 # reading the data
 f = open("digits.txt")
 content = f.readlines()
+random.shuffle(content)
 f.close()
 
 f = open("digits-test.txt")
@@ -22,13 +33,13 @@ for img in content_test[:len(content_test)]:
     full_dataset.append([1 if int(x)> 10 else 0 for x in imgspl])
 
 # creating train dataset
-for img in content[:int(0.8*len(content))]:
+for img in content[:int(0.95*len(content))]:
     imgspl = img.split(",")
     ans.append(int(imgspl[0]))
     images.append([1 if int(x)> 10 else 0 for x in imgspl[1:]])
 
 # creating test dataset
-for img in content[int(0.8*len(content)):]:
+for img in content[int(0.95*len(content)):]:
     imgspl = img.split(",")
     ans_test.append(int(imgspl[0]))
     images_test.append([1 if int(x)> 10 else 0 for x in imgspl[1:]])
@@ -41,30 +52,42 @@ ans_test = torch.tensor(ans_test)
 
 full_dataset = torch.tensor(full_dataset).float()
 
-# initializing the network's weights and biases
-g = torch.Generator().manual_seed(2147483647)
 
-w = torch.randn((784, 10), generator=g)
-b = torch.randn((10), generator=g)
-params = [w, b]
+
+# initializing the network's weights and biases
+g = torch.Generator().manual_seed(1235355345)
+
+wh = torch.randn((784, 50), generator=g)
+bh = torch.randn((50), generator=g)
+
+wo = torch.randn((50, 10), generator=g)
+bo = torch.randn((10), generator=g)
+
+params = [wh, bh, wo, bo]
 
 for p in params:
     p.requires_grad = True
 
+torch.autograd.set_detect_anomaly(True)
+
+
+
 # training the network
-miniBatchCount = 100
-for i in range(200000):
+miniBatchCount = 200
+for i in range(300000):
     minibatch = torch.randint(0, images.shape[0], (miniBatchCount,), generator=g)
 
-    logits = torch.tanh(images[minibatch] @ w+b)
+    h = torch.tanh(images[minibatch] @ wh + bh)
 
-    counts = logits.exp()
+    logits = h @ wo + bo
 
-    prob = counts/counts.sum(1, keepdim=True)
+    # counts = logits.exp()
+    # prob = counts/counts.sum(1, keepdim=True)
+    # loss = -prob[torch.arange(prob.shape[0]), ans[minibatch]].log().mean()
 
-    loss = -prob[torch.arange(prob.shape[0]), ans[minibatch]].log().mean()
+    loss = torch.nn.functional.cross_entropy(logits, ans[minibatch])
 
-    if i % 5000 == 0:
+    if i % 1000 == 0:
         print(loss.data)
 
     for p in params:
@@ -74,21 +97,26 @@ for i in range(200000):
 
     learningAlpha = 0.2
 
-    if loss.data < 2:
+    if loss.data < 0.75:
         learningAlpha = 0.1
-    if loss.data < 1.3:
-        learningAlpha = 0.07
-    if loss.data < 1.15:
+    if loss.data < 0.5:
         learningAlpha = 0.05
-    if loss.data < 1.11:
-        learningAlpha = 0.005
-
-    if loss.data < 1:
-        break
+    if loss.data < 0.2:
+        learningAlpha = 0.01
+    if loss.data < 0.1:
+        learningAlpha = 0.009
 
     for p in params:
         p.data -= learningAlpha * p.grad
-print(loss.data)
+
+# calculating the loss on the entire dataset
+h = torch.tanh(images @ wh + bh)
+
+logits = h @ wo + bo
+loss = torch.nn.functional.cross_entropy(logits, ans)
+print("entire dataset loss: ", loss.data)
+
+
 
 # sampling
 print("Guesses:")
@@ -102,7 +130,10 @@ for i in range(int(0.01*len(images_test))):
     #     print(row_str)
 
     cur_img = images_test[[i]]
-    logits = torch.tanh(cur_img @ w+b)
+
+    h = torch.tanh(cur_img @ wh + bh)
+
+    logits = h @ wo + bo
 
     counts = logits.exp()
 
@@ -111,20 +142,25 @@ for i in range(int(0.01*len(images_test))):
     guess = list(list(prob)[0]).index(max(list(list(prob)[0])))
     print(guess, ans_test[i])
 
+
+
 # calculating test loss
-logits = torch.tanh(images_test @ w+b)
+h = torch.tanh(images_test @ wh + bh)
 
-counts = logits.exp()
+logits = h @ wo + bo
 
-prob = counts/counts.sum(1, keepdim=True)
-
-loss = -prob[torch.arange(prob.shape[0]), ans_test].log().mean()
+loss = torch.nn.functional.cross_entropy(logits, ans_test)
 print("Test loss:")
 print(loss)
 
+
+
 # predicting the external image digit
 cur_img = torch.tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]).float()
-logits = torch.tanh(cur_img @ w+b)
+
+h = torch.tanh(cur_img @ wh + bh)
+
+logits = h @ wo + bo
 
 counts = logits.exp()
 
@@ -135,14 +171,16 @@ print("External image guess: ", guess)
 
 
 
-
 # writing the whole dataset predictions in a .csv file
 guesses = [
     ["ImageId", "Label"]
 ]
 for i in range(len(full_dataset)):
     cur_img = full_dataset[[i]]
-    logits = torch.tanh(cur_img @ w+b)
+
+    h = torch.tanh(cur_img @ wh + bh)
+
+    logits = h @ wo + bo
 
     counts = logits.exp()
 
