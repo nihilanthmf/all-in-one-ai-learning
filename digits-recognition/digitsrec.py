@@ -1,15 +1,7 @@
 import torch
 import csv
 import random
-
-# loss
-# 0.4032
-# 1.1678 - 500 neurons
-# 0.3626 - 100 neurons
-# 0.4456 - 150 neurons
-# 0.3513 - 50 neurons
-# 0.3767 - 25 neurons
-# 0.3835 - 75 neurons
+import matplotlib.pyplot as plt
 
 external_image_pixels = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
@@ -55,36 +47,44 @@ ans_test = torch.tensor(ans_test)
 full_dataset = torch.tensor(full_dataset).float()
 
 
-
 # initializing the network's weights and biases
 g = torch.Generator().manual_seed(1235355345)
 
-wh = torch.randn((784, 50), generator=g) / 784 ** 0.5
-bh = torch.randn((50), generator=g) * 0
+wh = torch.randn((784, 60), generator=g) / 784 ** 0.5
+bh = torch.randn((60), generator=g) * 0
 
-wo = torch.randn((50, 10), generator=g) * 0.01
+wo = torch.randn((60, 10), generator=g) * 0.01
 bo = torch.randn((10), generator=g) * 0
 
 params = [wh, bh, wo, bo]
+loss_values=[]
 
 # requiring gradients on each param
 for p in params:
     p.requires_grad = True
 
 
-# initializing the model function
-def model(input):
-    h = torch.sigmoid(input @ wh + bh)
+# the model function
+def model(input, show=False):
+    hpreact = input @ wh + bh
+    
+    h = torch.sigmoid(hpreact)
+    
     logits = h @ wo + bo
+    
+    if show:    
+        plt.imshow(h.abs() > 0.99, cmap="gray", interpolation="nearest")    
+        plt.show()
 
     return logits
 
+
 # training the network
-miniBatchCount = 200 # make it 2000 later on
+miniBatchCount = 100
 for i in range(300000):
     minibatch = torch.randint(0, images.shape[0], (miniBatchCount,), generator=g)
 
-    logits = model(images[minibatch])
+    logits = model(images[minibatch], False)
 
     loss = torch.nn.functional.cross_entropy(logits, ans[minibatch])
 
@@ -109,6 +109,10 @@ for i in range(300000):
 
     for p in params:
         p.data -= learningAlpha * p.grad
+        
+    # loss_values.append(loss)
+
+    
 
 
 def calc_train_dataset_results():
@@ -212,5 +216,5 @@ def save_prediction_to_csv():
 save_prediction_to_csv()
 
 
-for p in params:
-    print(torch.argmax(p))
+# plt.plot(torch.tensor(loss_values), label="Training Loss", color='b', linestyle='-')
+# plt.show()
