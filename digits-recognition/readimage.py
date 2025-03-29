@@ -1,11 +1,17 @@
 from PIL import Image
 
-im = Image.open('two.jpg')
+im = Image.open('./digits-recognition/four-high-res.png')
+
+im = im.convert("L")
+im = im.resize((28, 28))
+
+im.show()
+
 pix_val = list(im.getdata())
 print(pix_val)
 res = []
 for i in pix_val:
-    if i > (200,200,200,200):
+    if i > 200:
         res.append(0)
     else:
         res.append(1)
