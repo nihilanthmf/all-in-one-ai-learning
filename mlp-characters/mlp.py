@@ -13,7 +13,7 @@ def vis():
 
 
 # opening the names file and reading its data
-namesFile = open("names.txt", "r")
+namesFile = open("./mlp-characters/names.txt", "r")
 
 names = namesFile.read().splitlines()
 
@@ -74,12 +74,14 @@ for i in range(200000):
     h = torch.tanh(emb.view(-1, gramSize*embDim) @ wh + bh)
 
     # calculating the output layer
-    print(h.shape, wo.shape)
     logits = h @ wo + bo
     counts = logits.exp()
     prob = counts / counts.sum(1, keepdim=True)
 
     loss = -prob[torch.arange(examplesCount), y[minibatch]].log().mean()
+    
+    if i % 1000 == 0:
+        print(loss)
 
     if loss.data < 1.5:
         break
@@ -96,7 +98,7 @@ for i in range(200000):
 print(loss)
 
 # sampling from the model
-for _ in range(50):
+for _ in range(150):
     word = "."*gramSize
 
     while word[-1] != "." or len(word) == gramSize:

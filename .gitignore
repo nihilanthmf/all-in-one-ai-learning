@@ -3,3 +3,4 @@ pytorch_env
 /archive/train.txt
 /archive/train.json
 /mlp-words/output.txt
+/dogs-vs-cats/data
