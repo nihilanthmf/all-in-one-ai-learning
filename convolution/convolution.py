@@ -14,12 +14,11 @@ for p in range(1, size[1]):
     
 kernel = [
     [1, 2, 1],
-    [2, 4, 2],
+    [2, 0, 2],
     [1, 2, 1],
 ]
 
 # normalizing the kernel
-normalized_kernel = []
 kernel_sum = sum([sum([p for p in row]) for row in kernel])
 
 for row_index in range(len(kernel)):
@@ -49,12 +48,19 @@ for row_index in range(1, len(pix_mat) - 1):
             [pixel_7, pixel_8, pixel_9],
         ]
         
-        final_pix_value = []
+        pix_calculated_value = []
+        final_pix_value = [0, 0, 0]
         for k_row_index in range(len(kernel)):
             for k_val_index in range(len(kernel[k_row_index])):
                 cur_pix = list(near_pix_mat[k_row_index][k_val_index])
-                
-                final_pix_value = [kernel[k_row_index][k_val_index] * color for color in cur_pix]
+
+                pix_calculated_value.append([kernel[k_row_index][k_val_index] * color for color in cur_pix])
+
+
+        for pix_calculated_value_pixel in pix_calculated_value:
+            final_pix_value[0] += pix_calculated_value_pixel[0]
+            final_pix_value[1] += pix_calculated_value_pixel[1]
+            final_pix_value[2] += pix_calculated_value_pixel[2]
                     
         final_pix_mat[-1].append(final_pix_value)
 
@@ -63,9 +69,9 @@ for row_index in range(1, len(pix_mat) - 1):
 pixel_array = np.array(final_pix_mat, dtype=np.float32)
 
 # Normalize pixel values to 0-255
-pixel_array -= pixel_array.min()  # Shift min to 0
-pixel_array /= pixel_array.max()  # Scale between 0-1
-pixel_array *= 255
+# pixel_array -= pixel_array.min()  # Shift min to 0
+# pixel_array /= pixel_array.max()  # Scale between 0-1
+# pixel_array *= 255
 
 pixel_array = pixel_array.astype(np.uint8)  # Convert to uint8
 
@@ -74,4 +80,4 @@ image = Image.fromarray(pixel_array, 'RGB')
 
 # Show and save the image
 image.show()
-image.save("output.png")
+image.save("./convolution/output.png")
