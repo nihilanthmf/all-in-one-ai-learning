@@ -24,7 +24,7 @@ for file in os.listdir(dir):
     
     img = Image.open(file_path)
     img = img.convert("L")
-    img = img.resize((404//4, 360//4))
+    img = img.resize((404, 360))
 
     classification = file.split('.')[0]
     
