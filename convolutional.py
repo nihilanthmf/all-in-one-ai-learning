@@ -6,8 +6,7 @@ import csv
 
 # reading the data
 file = open("./digits-recognition/digits.txt")
-content = file.readlines()#[:1000]
-random.shuffle(content)
+content = file.readlines()#[:500]
 file.close()
 
 file = open("./digits-recognition/digits-test.txt")
@@ -19,6 +18,10 @@ ans = []
 images_test = []
 ans_test = []
 
+content_train = content[:int(0.95*len(content))]
+content_test = content[int(0.95*len(content)):]
+
+# random.shuffle(content_train)
 
 kaggleCompetitionDataset = []
 # creating full dataset
@@ -27,13 +30,13 @@ for img in content_kaggle[:len(content_kaggle)]:
     kaggleCompetitionDataset.append([int(x)/255 for x in imgspl])
 
 # creating train dataset
-for img in content[:int(0.95*len(content))]:
+for img in content_train:
     imgspl = img.split(",")
     ans.append(int(imgspl[0]))
     images.append([int(x)/255 for x in imgspl[1:]])
 
 # creating test dataset
-for img in content[int(0.95*len(content)):]:
+for img in content_test:
     imgspl = img.split(",")
     ans_test.append(int(imgspl[0]))
     images_test.append([int(x)/255 for x in imgspl[1:]])
@@ -50,12 +53,19 @@ kaggleCompetitionDataset = torch.tensor(kaggleCompetitionDataset).float()
 # initializing the network's params
 g = torch.Generator().manual_seed(1)
 
-convo_w = torch.randn((32, 3, 3),  generator=g, dtype=torch.float32)
-wh = torch.randn((196*32, 75), generator=g, dtype=torch.float32) / (196*32) **0.5
+batch_size = 16
+convo_w_kernels = 4
+
+weights_scale = 0.075
+
+convo_w = torch.randn((convo_w_kernels, 1, 3, 3), generator=g, dtype=torch.float32) * weights_scale
+# convo_w2 = torch.randn((convo_w_kernels**2, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32) * weights_scale
+
+wh = torch.randn((convo_w_kernels*28*28, 75), generator=g, dtype=torch.float32) * weights_scale
 bh = torch.zeros((75,)) 
 
-wo = torch.randn((75, 10), generator=g, dtype=torch.float32) / 75**0.5
-bo = torch.zeros((10,), ) 
+wo = torch.randn((75, 10), generator=g, dtype=torch.float32) * weights_scale
+bo = torch.zeros((10,), )
 
 params = [convo_w, wh, bh, wo, bo]
 
@@ -64,14 +74,7 @@ for p in params:
 
 loss_values=[]
 
-batch_size = 32
-
-
-def convolute(pix_mat:torch.tensor, kernel):
-    img_tensor = pix_mat.view(batch_size, 28, 28).unsqueeze(1)#.unsqueeze(0)#.repeat(16, 1, 1, 1)
-
-    kernel = kernel.unsqueeze(1)#.unsqueeze(0)
-
+def convolute(img_tensor:torch.tensor, kernel):
     output = f.conv2d(input=img_tensor, weight=kernel, padding=1)
     
     output = output.squeeze(1)
@@ -80,23 +83,42 @@ def convolute(pix_mat:torch.tensor, kernel):
 
 
 def model(img):
-    img = convolute(img, convo_w)#.view(batch_size, 784*32)
+    img_tensor = img.view(batch_size, 28, 28).unsqueeze(1)
 
-    img = f.max_pool2d(img, kernel_size=2, stride=2).view(batch_size, 196*32)
+    img_convo = convolute(img_tensor, convo_w)#.view(batch_size, 784*32)
 
-    h = torch.tanh(img @ wh + bh)
+    # img_activations = img_convo
+
+    ## img_pooling = f.max_pool2d(img_activations, kernel_size=2, stride=2).view(batch_size, 196*batch_size)
+
+    # img_convo_2 = convolute(img_activations, convo_w2)
+
+    # img_activations_2 = torch.relu(img_convo_2).view(batch_size, -1)
+    img_activations_2 = img_convo.view(batch_size, -1)
+
+    h = torch.relu(img_activations_2 @ wh + bh)
     
     logits = h @ wo + bo
+
+    # h_detached = h.detach().abs()
+    # plt.imshow(h_detached < 0.01, cmap="gray")    
+    # plt.show()
+    # plt.imshow(h_detached > 0.99, cmap="gray")    
+    # plt.show()
 
     return logits
 
 
-# forward + backward pass
-
 # Test loss after proper (not really) weight initialization: 0.0781
 
+
+# Test loss:
+# tensor(0.1169)
+# Test accuracy:
+# 0.9642857142857143
+
 # training loop
-for i in range(21000):
+for i in range(10000):
     batch_indecies = torch.randint(0, images.shape[0], (batch_size,), generator=g)
 
     img = images[batch_indecies]
@@ -105,9 +127,14 @@ for i in range(21000):
     logits = model(img)
 
     loss = f.cross_entropy(logits, curAns)
+    print(f"epoch {i}: {loss.data}")
+    loss += 0.000035 * sum(p.pow(2).sum() for p in params)
+    print(f"L2 loss epoch {i}: {loss.data}")
 
-    if i % 100 == 0 and i > 3000:
-        print(loss)
+    # if i % 50 == 0:
+    #     print(f"epoch {i}: {loss.data}")
+
+    if i % 10 == 0:
         loss_values.append(loss)
 
     for p in params:
@@ -115,12 +142,14 @@ for i in range(21000):
 
     loss.backward()
     
-    learningAlpha = 0.01
+    learningAlpha = 0.05
 
     if i > 5000:
-        learningAlpha = 0.004
-    # if i > 17000:
-    #     learningAlpha = 0.00275
+        learningAlpha = 0.0075
+    # if i > 5000:
+    #     learningAlpha = 0.005
+    # if i > 8000:
+    #     learningAlpha = 0.005
 
     for p in params:
         p.data -= learningAlpha * p.grad
