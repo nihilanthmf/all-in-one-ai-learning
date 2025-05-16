@@ -54,17 +54,17 @@ kaggleCompetitionDataset = torch.tensor(kaggleCompetitionDataset).float()
 g = torch.Generator().manual_seed(1)
 
 batch_size = 16
-convo_w_kernels = 4
+convo_w_kernels = 16
 
 weights_scale = 0.075
 
 convo_w = torch.randn((convo_w_kernels, 1, 3, 3), generator=g, dtype=torch.float32) * weights_scale
 # convo_w2 = torch.randn((convo_w_kernels**2, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32) * weights_scale
 
-wh = torch.randn((convo_w_kernels*28*28, 75), generator=g, dtype=torch.float32) * weights_scale
-bh = torch.zeros((75,)) 
+wh = torch.randn((convo_w_kernels*14*14, 100), generator=g, dtype=torch.float32) * weights_scale
+bh = torch.zeros((100,)) 
 
-wo = torch.randn((75, 10), generator=g, dtype=torch.float32) * weights_scale
+wo = torch.randn((100, 10), generator=g, dtype=torch.float32) * weights_scale
 bo = torch.zeros((10,), )
 
 params = [convo_w, wh, bh, wo, bo]
@@ -87,16 +87,15 @@ def model(img):
 
     img_convo = convolute(img_tensor, convo_w)#.view(batch_size, 784*32)
 
-    # img_activations = img_convo
-
     ## img_pooling = f.max_pool2d(img_activations, kernel_size=2, stride=2).view(batch_size, 196*batch_size)
-
     # img_convo_2 = convolute(img_activations, convo_w2)
-
     # img_activations_2 = torch.relu(img_convo_2).view(batch_size, -1)
-    img_activations_2 = img_convo.view(batch_size, -1)
 
-    h = torch.relu(img_activations_2 @ wh + bh)
+    img_activations = torch.relu(img_convo)
+
+    img_pooling = f.max_pool2d(img_activations, kernel_size=2, stride=2).view(batch_size, -1)
+
+    h = torch.tanh(img_pooling @ wh + bh)
     
     logits = h @ wo + bo
 
@@ -117,8 +116,23 @@ def model(img):
 # Test accuracy:
 # 0.9642857142857143
 
+sum_loss = 0
+
+
+# accuracy = 0.9795238095238096; loss = 0.0637; epochs = 120000; 16 conv kernels
+# 0.98 = 175000 epochs
+
+
+# 0.9776190476190476 = 8 conv kernels
+
+# 0.9795238095238096 = 32 conv kernels
+
+# 0.9823809523809524 = 200000 epochs
+
+# 0.9842857142857143 = 350000 epochs
+
 # training loop
-for i in range(10000):
+for i in range(200000):
     batch_indecies = torch.randint(0, images.shape[0], (batch_size,), generator=g)
 
     img = images[batch_indecies]
@@ -126,16 +140,18 @@ for i in range(10000):
 
     logits = model(img)
 
+    # calc loss
     loss = f.cross_entropy(logits, curAns)
-    print(f"epoch {i}: {loss.data}")
+    # applying L2 regularization
     loss += 0.000035 * sum(p.pow(2).sum() for p in params)
-    print(f"L2 loss epoch {i}: {loss.data}")
-
-    # if i % 50 == 0:
-    #     print(f"epoch {i}: {loss.data}")
+    
 
     if i % 10 == 0:
-        loss_values.append(loss)
+        loss_values.append(sum_loss / 10)
+        sum_loss = 0
+        print(f"L2 loss epoch {i}: {loss.data}")
+    else:
+        sum_loss += loss.item()
 
     for p in params:
         p.grad = None
@@ -145,7 +161,7 @@ for i in range(10000):
     learningAlpha = 0.05
 
     if i > 5000:
-        learningAlpha = 0.0075
+        learningAlpha = 0.01
     # if i > 5000:
     #     learningAlpha = 0.005
     # if i > 8000:
