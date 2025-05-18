@@ -1,23 +1,24 @@
 import torch
 import random
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import torch.nn.functional as f
 import csv
 import os
 import json
 from PIL import Image
+import numpy as np
 
 dir = "./dogs-vs-cats-redux-kernels-edition/train"
 
-# initializing the network's params
-g = torch.Generator().manual_seed(42)
+device = "cuda"
 
-batch_size = 6 # will be 2x that cause both dogs and cats
+# initializing the network's params
+g = torch.Generator(device=device).manual_seed(42)
+
+batch_size = 32 # will be 2x that cause both dogs and cats
 convo_w_kernels = 4
 
 weights_scale = 0.001
-
-device = "cuda"
 
 convo_w = torch.randn((convo_w_kernels, 3, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
 
@@ -26,6 +27,13 @@ bh = torch.zeros((25,), device=device)
 
 wo = torch.randn((25, 10), generator=g, dtype=torch.float32, device=device) * weights_scale
 bo = torch.zeros((10,), device=device)
+
+
+convo_w = convo_w.to(device)
+wh = wh.to(device)
+bh = bh.to(device)
+wo = wo.to(device)
+bo = bo.to(device)
 
 params = [convo_w, wh, bh, wo, bo]
 
@@ -47,6 +55,9 @@ def saveParams():
         json.dump(bo.tolist(), f)
 
 def convolute(img_tensor:torch.tensor, kernel):
+    print(torch.version.cuda)  # Shows the CUDA version PyTorch was built with
+    print(torch.cuda.is_available())  # Checks if CUDA GPU access is available
+    print(torch.cuda.get_device_name(0))  # Shows GPU name PyTorch detects
     output = f.conv2d(input=img_tensor, weight=kernel, padding=1)
     
     output = output.squeeze(1)
@@ -83,9 +94,11 @@ def readImageBatch(indecies):
     def readImg(cat, i):
         img = Image.open(os.path.join(dir, f"cat.{i}.jpg" if cat else f"dog.{i}.jpg"))
         img = img.resize((128, 128))
-        width, height = img.size
+        # width, height = img.size
+        
+        pixels = np.array(img)
 
-        pixels = [[img.getpixel((x, y)) for x in range(width)] for y in range(height)]
+        # pixels = [[img.getpixel((x, y)) for x in range(width)] for y in range(height)]
         
         images.append(pixels)
         ans.append(0 if cat else 1)
@@ -101,8 +114,9 @@ for i in range(10000):
     randomIndecies = [random.randint(1, 9115) for _ in range(batch_size)]
 
     readImagesRaw = readImageBatch(randomIndecies)
-    img = torch.tensor(readImagesRaw[0], device=device).float().permute(0, 3, 1, 2)
-    ans = torch.tensor(readImagesRaw[1], device=device)
+    # img = torch.tensor(readImagesRaw[0], device=device).float().permute(0, 3, 1, 2)
+    img = torch.from_numpy(np.array(readImagesRaw[0])).float().permute(0, 3, 1, 2).to(device)
+    ans = torch.tensor(readImagesRaw[1], device=device).to(device)
 
     logits = model(img, i)
 
