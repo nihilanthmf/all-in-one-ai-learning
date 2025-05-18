@@ -17,13 +17,15 @@ convo_w_kernels = 4
 
 weights_scale = 0.001
 
-convo_w = torch.randn((convo_w_kernels, 3, 3, 3), generator=g, dtype=torch.float32) * weights_scale
+device = "cuda"
 
-wh = torch.randn((4096 * convo_w_kernels, 25), generator=g, dtype=torch.float32) * weights_scale
-bh = torch.zeros((25,))
+convo_w = torch.randn((convo_w_kernels, 3, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
 
-wo = torch.randn((25, 10), generator=g, dtype=torch.float32) * weights_scale
-bo = torch.zeros((10,), )
+wh = torch.randn((4096 * convo_w_kernels, 25), generator=g, dtype=torch.float32, device=device) * weights_scale
+bh = torch.zeros((25,), device=device)
+
+wo = torch.randn((25, 10), generator=g, dtype=torch.float32, device=device) * weights_scale
+bo = torch.zeros((10,), device=device)
 
 params = [convo_w, wh, bh, wo, bo]
 
@@ -99,8 +101,8 @@ for i in range(10000):
     randomIndecies = [random.randint(1, 9115) for _ in range(batch_size)]
 
     readImagesRaw = readImageBatch(randomIndecies)
-    img = torch.tensor(readImagesRaw[0]).float().permute(0, 3, 1, 2)
-    ans = torch.tensor(readImagesRaw[1])
+    img = torch.tensor(readImagesRaw[0], device=device).float().permute(0, 3, 1, 2)
+    ans = torch.tensor(readImagesRaw[1], device=device)
 
     logits = model(img, i)
 
