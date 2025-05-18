@@ -114,8 +114,8 @@ for i in range(10000):
     randomIndecies = [random.randint(1, 9115) for _ in range(batch_size)]
 
     readImagesRaw = readImageBatch(randomIndecies)
-    # img = torch.tensor(readImagesRaw[0], device=device).float().permute(0, 3, 1, 2)
-    img = torch.from_numpy(np.array(readImagesRaw[0])).float().permute(0, 3, 1, 2).to(device)
+    # img = torch.tensor(readImagesRaw[0], device=device).float().permute(0, 3, 1, 2) # that shit was 10x slower for some reason
+    img = torch.from_numpy(np.array(readImagesRaw[0])).float().permute(0, 3, 1, 2).to(device) # that shit 10x speed for some fucking reason
     ans = torch.tensor(readImagesRaw[1], device=device).to(device)
 
     logits = model(img, i)
