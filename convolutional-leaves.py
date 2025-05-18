@@ -7,22 +7,64 @@ import os
 import json
 from PIL import Image
 
-dir = "./dogs-vs-cats-redux-kernels-edition/train"
+# reading the data
+file = open("./leaf-classification/train.csv")
+content = file.readlines()[1:]#[:500]
+file.close()
+
+file = open("./leaf-classification/test.csv")
+content_kaggle = file.readlines()[1:]
+file.close()
+
+images = []
+ans = []
+images_test = []
+ans_test = []
+
+content_train = content[:int(0.95*len(content))]
+content_test = content[int(0.95*len(content)):]
+
+# random.shuffle(content_train)
+kaggleCompetitionDataset = []
+# creating full dataset
+for img in content_kaggle[:len(content_kaggle)]:
+    imgspl = img.split(",", 1)
+    kaggleCompetitionDataset.append([int(x)/255 for x in imgspl])
+
+# creating train dataset
+for img in content_train:
+    imgspl = img.split(",")
+    ans.append(imgspl[1])
+    images.append([float(x) for x in imgspl[2:]])
+
+# creating test dataset
+for img in content_test:
+    imgspl = img.split(",")
+    ans_test.append(int(imgspl[1]))
+    images_test.append([float(x) for x in imgspl[2:]])
+
+images = torch.tensor(images).float()
+ans = torch.tensor(ans)
+
+images_test = torch.tensor(images_test).float()
+ans_test = torch.tensor(ans_test)
+
+kaggleCompetitionDataset = torch.tensor(kaggleCompetitionDataset).float()
 
 # initializing the network's params
-g = torch.Generator().manual_seed(42)
+g = torch.Generator().manual_seed(1)
 
-batch_size = 6 # will be 2x that cause both dogs and cats
+batch_size = 4 # will be 2x that cause both dogs and cats
 convo_w_kernels = 4
 
-weights_scale = 0.001
+weights_scale = 0.075
 
 convo_w = torch.randn((convo_w_kernels, 3, 3, 3), generator=g, dtype=torch.float32) * weights_scale
 
-wh = torch.randn((4096 * convo_w_kernels, 25), generator=g, dtype=torch.float32) * weights_scale
-bh = torch.zeros((25,))
+wh = torch.randn((201216, 50), generator=g, dtype=torch.float32) * weights_scale
+bh = torch.zeros((50,)) 
 
-wo = torch.randn((25, 10), generator=g, dtype=torch.float32) * weights_scale
+wo = torch.randn((50, 10), generator=g, dtype=torch.float32) * weights_scale
 bo = torch.zeros((10,), )
 
 params = [convo_w, wh, bh, wo, bo]
@@ -51,23 +93,17 @@ def convolute(img_tensor:torch.tensor, kernel):
     
     return output
 
-def model(img, epoch):
+
+def model(img):
     img_convo = convolute(img, convo_w)
 
     img_activations = torch.relu(img_convo)
 
-    img_pooling = f.max_pool2d(img_activations, kernel_size=2, stride=2).reshape(batch_size*2, -1)
+    img_pooling = f.max_pool2d(img_activations, kernel_size=2, stride=2).view(batch_size*2, -1)
 
     h = torch.tanh(img_pooling @ wh + bh)
     
     logits = h @ wo + bo
-
-    # if epoch > 200:
-    #     h_detached = h.detach().abs()
-    #     plt.imshow(h_detached < 0.01, cmap="gray")    
-    #     plt.show()
-        # plt.imshow(h_detached > 0.99, cmap="gray")    
-        # plt.show()
 
     return logits
 
@@ -80,12 +116,21 @@ def readImageBatch(indecies):
     # 0 = cat; 1 = dog
     def readImg(cat, i):
         img = Image.open(os.path.join(dir, f"cat.{i}.jpg" if cat else f"dog.{i}.jpg"))
-        img = img.resize((128, 128))
+        img = img.resize((img.size[0]//2, img.size[1]//2))
         width, height = img.size
 
+        pad_w = 525 - width
+        pad_h = 384 - height
+
+        pad = (pad_w // 2, pad_w - pad_w // 2,
+            pad_h // 2, pad_h - pad_h // 2)
+
         pixels = [[img.getpixel((x, y)) for x in range(width)] for y in range(height)]
+        pixels = torch.tensor(pixels).permute(2,0,1)
+
+        padded_img = f.pad(pixels, pad, mode='constant', value=0)
         
-        images.append(pixels)
+        images.append(padded_img.tolist())
         ans.append(0 if cat else 1)
 
     for index in indecies:
@@ -99,24 +144,21 @@ for i in range(10000):
     randomIndecies = [random.randint(1, 9115) for _ in range(batch_size)]
 
     readImagesRaw = readImageBatch(randomIndecies)
-    img = torch.tensor(readImagesRaw[0]).float().permute(0, 3, 1, 2)
+    img = torch.tensor(readImagesRaw[0]).float()
     ans = torch.tensor(readImagesRaw[1])
 
-    logits = model(img, i)
+    logits = model(img)
 
     # calc loss
     loss = f.cross_entropy(logits, ans)
 
     # applying L2 regularization
-    # loss += 0.000015 * sum(p.pow(2).sum() for p in params)
-
-    sum_loss += loss
-    if i % 10 == 0:
-        loss_values.append(sum_loss / 10)
-        sum_loss = 0
-
-    print(f"{i} epoch L2 loss: {loss.data}")
-    sum_loss += loss.item() 
+    loss += 0.000035 * sum(p.pow(2).sum() for p in params)
+    
+    loss_values.append(sum_loss / 10)
+    sum_loss = 0
+    print(f"L2 loss epoch {i}: {loss.data}")
+    sum_loss += loss.item()
 
     for p in params:
         p.grad = None
@@ -125,8 +167,8 @@ for i in range(10000):
     
     learningAlpha = 0.05
 
-    if i > 1000:
-        learningAlpha = 0.005
+    if i > 5000:
+        learningAlpha = 0.01
 
     for p in params:
         p.data -= learningAlpha * p.grad

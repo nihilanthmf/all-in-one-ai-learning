@@ -2,7 +2,7 @@ from PIL import Image
 import os
 import json
 
-dir = "./dogs-vs-cats-redux-kernels-edition/train"
+dir = "./leaf-classification/train.csv"
 index = 0
 
 maxWidth = 0
