@@ -10,7 +10,7 @@ import numpy as np
 
 dir = "./dogs-vs-cats-redux-kernels-edition/train"
 
-device = "cpu"
+device = "cuda"
 
 # initializing the network's params
 g = torch.Generator(device=device).manual_seed(42)
@@ -23,10 +23,10 @@ weights_scale = 0.001
 convo_w = torch.randn((convo_w_kernels, 3, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
 convo_w2 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
 
-wh = torch.randn((1024 * convo_w_kernels, 25), generator=g, dtype=torch.float32, device=device) * weights_scale
-bh = torch.zeros((25,), device=device)
+wh = torch.randn((1024 * convo_w_kernels, 10), generator=g, dtype=torch.float32, device=device) * weights_scale
+bh = torch.zeros((10,), device=device)
 
-wo = torch.randn((25, 10), generator=g, dtype=torch.float32, device=device) * weights_scale
+wo = torch.randn((10, 10), generator=g, dtype=torch.float32, device=device) * weights_scale
 bo = torch.zeros((10,), device=device)
 
 
@@ -65,13 +65,13 @@ def convolute(img_tensor:torch.tensor, kernel):
 def model(img, epoch):
     img_convo = convolute(img, convo_w)
 
-    img_activations = torch.relu(img_convo)
+    img_activations = f.leaky_relu(img_convo)
 
     img_pooling = f.max_pool2d(img_activations, kernel_size=2, stride=2)#.reshape(batch_size*2, -1)
     
     img_convo_2 = convolute(img_pooling, convo_w2)
     
-    img_activations_2 = torch.relu(img_convo_2)
+    img_activations_2 = f.leaky_relu(img_convo_2)
 
     img_pooling_2 = f.max_pool2d(img_activations_2, kernel_size=2, stride=2).reshape(batch_size*2, -1)
 
@@ -141,10 +141,12 @@ for i in range(10000):
 
     loss.backward()
     
-    learningAlpha = 0.05
+    learningAlpha = 0.1
 
     if i > 1000:
         learningAlpha = 0.005
+    elif i > 200:
+        learningAlpha = 0.05
 
     for p in params:
         p.data -= learningAlpha * p.grad
