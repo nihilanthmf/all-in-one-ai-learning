@@ -22,6 +22,8 @@ weights_scale = 0.001
 
 convo_w = torch.randn((convo_w_kernels, 3, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
 convo_w2 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
+convo_w3 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
+convo_w4 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
 
 wh = torch.randn((1024 * convo_w_kernels, 10), generator=g, dtype=torch.float32, device=device) * weights_scale
 bh = torch.zeros((10,), device=device)
@@ -64,19 +66,21 @@ def convolute(img_tensor:torch.tensor, kernel):
 
 def model(img, epoch):
     img_convo = convolute(img, convo_w)
+    img_activations = f.relu(img_convo)
+    img_convo_2 = convolute(img_activations, convo_w2)
+    img_activations_2 = f.relu(img_convo_2)
 
-    img_activations = f.leaky_relu(img_convo)
+    img_pooling = f.max_pool2d(img_activations_2, kernel_size=2, stride=2)
 
-    img_pooling = f.max_pool2d(img_activations, kernel_size=2, stride=2)#.reshape(batch_size*2, -1)
-    
-    img_convo_2 = convolute(img_pooling, convo_w2)
-    
-    img_activations_2 = f.leaky_relu(img_convo_2)
+    img_convo_3 = convolute(img_pooling, convo_w3)
+    img_activations_3 = f.relu(img_convo_3)
+    img_convo_4 = convolute(img_activations_3, convo_w4)
+    img_activations_4 = f.relu(img_convo_4)
 
-    img_pooling_2 = f.max_pool2d(img_activations_2, kernel_size=2, stride=2).reshape(batch_size*2, -1)
+    img_pooling_2 = f.max_pool2d(img_activations_4, kernel_size=2, stride=2)
 
-    # print(img_pooling_2.shape, img_pooling.shape)
-    h = torch.tanh(img_pooling_2 @ wh + bh)
+    flat = img_pooling_2.reshape(batch_size*2, -1)
+    h = torch.tanh(flat @ wh + bh)
     
     logits = h @ wo + bo
 
