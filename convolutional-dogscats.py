@@ -16,11 +16,12 @@ device = "cuda"
 g = torch.Generator(device=device).manual_seed(42)
 
 batch_size = 32 # will be 2x that cause both dogs and cats
-convo_w_kernels = 32
+convo_w_kernels = 128
 
 weights_scale = 0.001
 
 convo_w = torch.randn((convo_w_kernels, 3, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
+convo_w2 = torch.randn((convo_w_kernels, 3, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
 
 wh = torch.randn((4096 * convo_w_kernels, 25), generator=g, dtype=torch.float32, device=device) * weights_scale
 bh = torch.zeros((25,), device=device)
@@ -67,8 +68,14 @@ def model(img, epoch):
     img_activations = torch.relu(img_convo)
 
     img_pooling = f.max_pool2d(img_activations, kernel_size=2, stride=2).reshape(batch_size*2, -1)
+    
+    img_convo_2 = convolute(img_pooling, convo_w2)
+    
+    img_activations_2 = torch.relu(img_convo_2)
 
-    h = torch.tanh(img_pooling @ wh + bh)
+    img_pooling_2 = f.max_pool2d(img_activations_2, kernel_size=2, stride=2).reshape(batch_size*2, -1)
+
+    h = torch.tanh(img_pooling_2 @ wh + bh)
     
     logits = h @ wo + bo
 
@@ -91,11 +98,8 @@ def readImageBatch(indecies):
     def readImg(cat, i):
         img = Image.open(os.path.join(dir, f"cat.{i}.jpg" if cat else f"dog.{i}.jpg"))
         img = img.resize((128, 128))
-        # width, height = img.size
         
         pixels = np.array(img)
-
-        # pixels = [[img.getpixel((x, y)) for x in range(width)] for y in range(height)]
         
         images.append(pixels)
         ans.append(0 if cat else 1)
@@ -121,7 +125,7 @@ for i in range(10000):
     loss = f.cross_entropy(logits, ans)
 
     # applying L2 regularization
-    # loss += 0.000015 * sum(p.pow(2).sum() for p in params)
+    loss += 0.000015 * sum(p.pow(2).sum() for p in params)
 
     sum_loss += loss
     if i % 10 == 0:
