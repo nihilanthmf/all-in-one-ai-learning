@@ -16,7 +16,7 @@ device = "cuda"
 g = torch.Generator(device=device).manual_seed(42)
 
 batch_size = 32 # will be 2x that cause both dogs and cats
-convo_w_kernels = 4
+convo_w_kernels = 32
 
 weights_scale = 0.001
 
@@ -55,9 +55,6 @@ def saveParams():
         json.dump(bo.tolist(), f)
 
 def convolute(img_tensor:torch.tensor, kernel):
-    print(torch.version.cuda)  # Shows the CUDA version PyTorch was built with
-    print(torch.cuda.is_available())  # Checks if CUDA GPU access is available
-    print(torch.cuda.get_device_name(0))  # Shows GPU name PyTorch detects
     output = f.conv2d(input=img_tensor, weight=kernel, padding=1)
     
     output = output.squeeze(1)
