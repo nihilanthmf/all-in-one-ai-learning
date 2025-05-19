@@ -99,6 +99,8 @@ def model(img):
     
     logits = h @ wo + bo
 
+    print(logits)
+
     # h_detached = h.detach().abs()
     # plt.imshow(h_detached < 0.01, cmap="gray")    
     # plt.show()
