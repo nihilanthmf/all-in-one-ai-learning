@@ -1,6 +1,6 @@
 import torch
 import random
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import torch.nn.functional as f
 import csv
 import os
@@ -10,7 +10,7 @@ import numpy as np
 
 dir = "./dogs-vs-cats-redux-kernels-edition/train"
 
-device = "cpu"
+device = "cuda"
 
 # initializing the network's params
 g = torch.Generator(device=device).manual_seed(42)
@@ -98,8 +98,6 @@ def model(img, epoch):
 
     img_pooling_3 = f.max_pool2d(img_activations_8, kernel_size=2, stride=2)
 
-    print(img_pooling_3.shape)
-
     flat = img_pooling_3.reshape(batch_size*2, -1)
     h = torch.tanh(flat @ wh + bh)
     
@@ -157,7 +155,9 @@ for i in range(10000):
         loss_values.append(sum_loss / 10)
         sum_loss = 0
 
-    print(f"{i} epoch L2 loss: {loss.data}")
+    preds = torch.argmax(logits, dim=1)
+    acc = (preds == ans).float().mean().item()
+    print(f"{i} epoch loss: {loss.item()}, acc: {acc}")
     sum_loss += loss.item() 
 
     for p in params:
