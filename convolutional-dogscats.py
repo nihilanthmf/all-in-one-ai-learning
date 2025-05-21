@@ -20,15 +20,15 @@ convo_w_kernels = 128
 
 weights_scale = 0.001
 
-convo_w = torch.randn((convo_w_kernels, 3, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
-convo_w2 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
-convo_w3 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
-convo_w4 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
+convo_w = torch.randn((convo_w_kernels, 3, 3, 3), generator=g, dtype=torch.float32, device=device) * np.sqrt(2. / 27)
+convo_w2 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * np.sqrt(2. / 9*convo_w_kernels)
+convo_w3 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * np.sqrt(2. / 9*convo_w_kernels)
+convo_w4 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device)* np.sqrt(2. / 9*convo_w_kernels)
 
-convo_w5 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
-convo_w6 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
-convo_w7 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
-convo_w8 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
+convo_w5 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * np.sqrt(2. / 9*convo_w_kernels)
+convo_w6 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * np.sqrt(2. / 9*convo_w_kernels)
+convo_w7 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * np.sqrt(2. / 9*convo_w_kernels)
+convo_w8 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * np.sqrt(2. / 9*convo_w_kernels)
 
 wh = torch.randn((8192, 10), generator=g, dtype=torch.float32, device=device) * weights_scale
 bh = torch.zeros((10,), device=device)
@@ -43,7 +43,7 @@ bh = bh.to(device)
 wo = wo.to(device)
 bo = bo.to(device)
 
-params = [convo_w, wh, bh, wo, bo]
+params = [convo_w, convo_w2, convo_w3, convo_w4, convo_w5, convo_w6, convo_w7, convo_w8, wh, bh, wo, bo]
 
 for p in params:
     p.requires_grad=True
@@ -135,11 +135,11 @@ def readImageBatch(indecies):
 
 # training loop
 for i in range(10000):
-    randomIndecies = [random.randint(1, 9115) for _ in range(batch_size)]
+    randomIndecies = [random.randint(1, 2) for _ in range(batch_size)]
 
     readImagesRaw = readImageBatch(randomIndecies)
     # img = torch.tensor(readImagesRaw[0], device=device).float().permute(0, 3, 1, 2) # that shit was 10x slower for some reason
-    img = torch.from_numpy(np.array(readImagesRaw[0])).float().permute(0, 3, 1, 2).to(device) # that shit 10x speed for some fucking reason
+    img = torch.from_numpy(np.array(readImagesRaw[0])).float().permute(0, 3, 1, 2).to(device) / 255.0 # that shit 10x speed for some fucking reason
     ans = torch.tensor(readImagesRaw[1], device=device).to(device)
 
     logits = model(img, i)
@@ -164,13 +164,16 @@ for i in range(10000):
         p.grad = None
 
     loss.backward()
+
+    print(convo_w.grad.norm())
+    print(wh.grad.norm())
     
-    learningAlpha = 0.1
+    learningAlpha = 0.01
 
     if i > 1000:
-        learningAlpha = 0.005
+        learningAlpha = 0.001
     elif i > 200:
-        learningAlpha = 0.05
+        learningAlpha = 0.005
 
     for p in params:
         p.data -= learningAlpha * p.grad
