@@ -8,6 +8,11 @@ import json
 from PIL import Image
 import numpy as np
 
+# setting training/inference mode
+toTrain = False
+inferenceImages = ["prianik.jpeg", "kitty.jpg"]
+
+# model setup
 dir = "./dogs-vs-cats-redux-kernels-edition/train"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -35,7 +40,6 @@ bh = torch.zeros((10,), device=device)
 
 wo = torch.randn((10, 2), generator=g, dtype=torch.float32, device=device) * weights_scale
 bo = torch.zeros((2,), device=device)
-
 
 convo_w = convo_w.to(device)
 wh = wh.to(device)
@@ -69,7 +73,7 @@ def convolute(img_tensor:torch.tensor, kernel):
     
     return output
 
-def model(img, epoch):
+def model(img):
     img_convo = convolute(img, convo_w)
     img_activations = f.relu(img_convo)
     img_convo_2 = convolute(img_activations, convo_w2)
@@ -103,15 +107,14 @@ def model(img, epoch):
     
     logits = h @ wo + bo
 
-    # h_detached = h.detach().abs()
-    # plt.imshow(h_detached < 0.01, cmap="gray")    
-    # plt.show()
-    # plt.imshow(h_detached > 0.99, cmap="gray")    
-    # plt.show()
-
     return logits
 
-sum_loss = 0
+def readImage(imgPath):
+    img = Image.open(imgPath)
+    img = img.resize((128, 128))
+        
+    pixels = np.array(img)
+    return pixels
 
 def readImageBatch(indecies):
     images = []
@@ -119,10 +122,7 @@ def readImageBatch(indecies):
 
     # 0 = cat; 1 = dog
     def readImg(cat, i):
-        img = Image.open(os.path.join(dir, f"cat.{i}.jpg" if cat else f"dog.{i}.jpg"))
-        img = img.resize((128, 128))
-        
-        pixels = np.array(img)
+        pixels = readImage(os.path.join(dir, f"cat.{i}.jpg" if cat else f"dog.{i}.jpg"))
         
         images.append(pixels)
         ans.append(0 if cat else 1)
@@ -133,67 +133,61 @@ def readImageBatch(indecies):
 
     return [images, ans]
 
-# training loop
-for i in range(10000):
-    randomIndecies = [random.randint(1, 9115) for _ in range(batch_size)]
+def train():
+    for i in range(10000):
+        randomIndecies = [random.randint(1, 9115) for _ in range(batch_size)]
 
-    readImagesRaw = readImageBatch(randomIndecies)
-    # img = torch.tensor(readImagesRaw[0], device=device).float().permute(0, 3, 1, 2) # that shit was 10x slower for some reason
-    img = torch.from_numpy(np.array(readImagesRaw[0])).float().permute(0, 3, 1, 2).to(device) / 255.0 # that shit 10x speed for some fucking reason
-    ans = torch.tensor(readImagesRaw[1], device=device).to(device)
+        readImagesRaw = readImageBatch(randomIndecies)
+        # img = torch.tensor(readImagesRaw[0], device=device).float().permute(0, 3, 1, 2) # that shit was 10x slower for some reason
+        img = torch.from_numpy(np.array(readImagesRaw[0])).float().permute(0, 3, 1, 2).to(device) / 255.0 # that shit 10x speed for some fucking reason
+        ans = torch.tensor(readImagesRaw[1], device=device).to(device)
 
-    logits = model(img, i)
+        logits = model(img)
 
-    # calc loss
-    loss = f.cross_entropy(logits, ans)
+        # calc loss
+        loss = f.cross_entropy(logits, ans)
 
-    # applying L2 regularization
-    loss += 0.000015 * sum(p.pow(2).sum() for p in params)
+        # applying L2 regularization
+        loss += 0.000015 * sum(p.pow(2).sum() for p in params)
 
-    sum_loss += loss
-    if i % 10 == 0:
-        loss_values.append(sum_loss / 10)
-        sum_loss = 0
+        preds = torch.argmax(logits, dim=1)
+        acc = (preds == ans).float().mean().item()
+        print(f"{i} epoch loss: {loss.item()}, acc: {acc}")
+
+        for p in params:
+            p.grad = None
+
+        loss.backward()
+
+        print(convo_w.grad.norm())
+        print(wh.grad.norm())
+        
+        learningAlpha = 0.01
+
+        if i > 2500:
+            learningAlpha = 0.05
+
+        for p in params:
+            p.data -= learningAlpha * p.grad
+    saveParams()
+
+def inference(imagesPaths):
+    
+    images = []
+    for path in imagesPaths:
+        images.append(readImage(path))
+    
+    img = torch.from_numpy(np.array(images)).float().permute(0, 3, 1, 2).to(device) / 255.0 # that shit 10x speed for some fucking reason
+
+    logits = model(img)
 
     preds = torch.argmax(logits, dim=1)
-    acc = (preds == ans).float().mean().item()
-    print(f"{i} epoch loss: {loss.item()}, acc: {acc}")
-    sum_loss += loss.item() 
 
-    for p in params:
-        p.grad = None
+    print(preds)
 
-    loss.backward()
-
-    print(convo_w.grad.norm())
-    print(wh.grad.norm())
-    
-    learningAlpha = 0.01
-
-    if i > 2500:
-        learningAlpha = 0.05
-
-    for p in params:
-        p.data -= learningAlpha * p.grad
-
-saveParams()
-
-# # Calculating test loss/accuracy
-
-#     batch_size = images_test.shape[0]
-
-#     logits = model(images_test)
-
-#     loss = f.cross_entropy(logits, ans_test)
-
-#     y_pred_labels = torch.argmax(logits, dim=1)
-        
-#     correct = (y_pred_labels == ans_test).sum().item()
-        
-#     accuracy = correct / ans_test.size(0)
-
-#     print("Test loss:")
-#     print(loss)
-
-#     print("Test accuracy:")
-#     print(accuracy)
+# training loop
+if (toTrain):
+    train()
+else:
+    batch_size = len(inferenceImages)//2 # this is very questionable
+    inference(inferenceImages)
