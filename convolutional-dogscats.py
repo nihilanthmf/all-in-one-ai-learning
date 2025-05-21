@@ -135,7 +135,7 @@ def readImageBatch(indecies):
 
 # training loop
 for i in range(10000):
-    randomIndecies = [random.randint(1, 2) for _ in range(batch_size)]
+    randomIndecies = [random.randint(1, 9115) for _ in range(batch_size)]
 
     readImagesRaw = readImageBatch(randomIndecies)
     # img = torch.tensor(readImagesRaw[0], device=device).float().permute(0, 3, 1, 2) # that shit was 10x slower for some reason
@@ -170,10 +170,8 @@ for i in range(10000):
     
     learningAlpha = 0.01
 
-    if i > 1000:
-        learningAlpha = 0.001
-    elif i > 200:
-        learningAlpha = 0.005
+    if i > 2500:
+        learningAlpha = 0.05
 
     for p in params:
         p.data -= learningAlpha * p.grad
