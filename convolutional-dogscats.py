@@ -18,17 +18,17 @@ g = torch.Generator(device=device).manual_seed(42)
 batch_size = 32 # will be 2x that cause both dogs and cats
 convo_w_kernels = 128
 
-weights_scale = 0.001
+weights_scale = 0.05
 
-convo_w = torch.randn((convo_w_kernels, 3, 3, 3), generator=g, dtype=torch.float32, device=device) * np.sqrt(2. / 27)
-convo_w2 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * np.sqrt(2. / 9*convo_w_kernels)
-convo_w3 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * np.sqrt(2. / 9*convo_w_kernels)
-convo_w4 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device)* np.sqrt(2. / 9*convo_w_kernels)
+convo_w = torch.randn((convo_w_kernels, 3, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
+convo_w2 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
+convo_w3 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
+convo_w4 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device)* weights_scale
 
-convo_w5 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * np.sqrt(2. / 9*convo_w_kernels)
-convo_w6 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * np.sqrt(2. / 9*convo_w_kernels)
-convo_w7 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * np.sqrt(2. / 9*convo_w_kernels)
-convo_w8 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * np.sqrt(2. / 9*convo_w_kernels)
+convo_w5 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
+convo_w6 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
+convo_w7 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
+convo_w8 = torch.randn((convo_w_kernels, convo_w_kernels, 3, 3), generator=g, dtype=torch.float32, device=device) * weights_scale
 
 wh = torch.randn((8192, 10), generator=g, dtype=torch.float32, device=device) * weights_scale
 bh = torch.zeros((10,), device=device)
