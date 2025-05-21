@@ -10,7 +10,7 @@ import numpy as np
 
 dir = "./dogs-vs-cats-redux-kernels-edition/train"
 
-device = "cuda"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # initializing the network's params
 g = torch.Generator(device=device).manual_seed(42)
