@@ -80,7 +80,7 @@ def saveParams():
         json.dump(wo.tolist(), f)
     with open(f"./weights/bo.txt", "w") as f:
         json.dump(bo.tolist(), f)
-saveParams()
+
 def convolute(img_tensor:torch.tensor, kernel):
     output = f.conv2d(input=img_tensor, weight=kernel, padding=1)
     
