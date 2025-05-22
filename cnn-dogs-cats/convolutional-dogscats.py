@@ -9,7 +9,7 @@ from PIL import Image
 import numpy as np
 
 # setting training/inference mode
-toTrain = False
+toTrain = True
 inferenceImages = []
 
 for i in range(1, 33):
@@ -85,8 +85,6 @@ def saveParams():
         json.dump(bo.tolist(), f)
 
 def convolute(img_tensor:torch.tensor, kernel):
-    print(img_tensor.shape)
-    print(kernel.shape)
     output = F.conv2d(input=img_tensor, weight=kernel, padding=1)
     
     output = output.squeeze(1)
@@ -154,8 +152,9 @@ def readImageBatch(indecies):
     return [images, ans]
 
 def train():
-    for i in range(10000):
-        randomIndecies = [random.randint(1, 11500) for _ in range(batch_size)]
+    global batch_size
+    for i in range(15000):
+        randomIndecies = [random.randint(1, 12400) for _ in range(batch_size)]
 
         readImagesRaw = readImageBatch(randomIndecies)
         # img = torch.tensor(readImagesRaw[0], device=device).float().permute(0, 3, 1, 2) # that shit was 10x slower for some reason
@@ -182,14 +181,17 @@ def train():
         print(convo_w.grad.norm())
         print(wh.grad.norm())
         
-        learningAlpha = 0.01
+        learningAlpha = 0.025
 
-        if i > 2500:
-            learningAlpha = 0.05
+        if i > 5000:
+            learningAlpha = 0.01
 
         for p in params:
             p.data -= learningAlpha * p.grad
     saveParams()
+    
+    batch_size = 100
+    getTestLoss()
 
 def getTestLoss():
     indecies = range(12400, 12500)
@@ -211,9 +213,6 @@ def getTestLoss():
     preds = torch.argmax(logits, dim=1)
     acc = (preds == ans).float().mean().item()
     print(f"Test loss: {loss.item()}, test acc: {acc}")
-
-batch_size = 100
-getTestLoss()
 
 def inference(imagesPaths):
     images = []
