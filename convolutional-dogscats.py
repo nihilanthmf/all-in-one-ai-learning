@@ -9,7 +9,7 @@ from PIL import Image
 import numpy as np
 
 # setting training/inference mode
-toTrain = False
+toTrain = True
 inferenceImages = ["prianik.jpeg", "kitty.jpg"]
 
 # model setup
@@ -57,6 +57,21 @@ loss_values=[]
 def saveParams():
     with open(f"./weights/convo_w.txt", "w") as f:
         json.dump(convo_w.tolist(), f)
+    with open(f"./weights/convo_w2.txt", "w") as f:
+        json.dump(convo_w2.tolist(), f)
+    with open(f"./weights/convo_w3.txt", "w") as f:
+        json.dump(convo_w3.tolist(), f)
+    with open(f"./weights/convo_w4.txt", "w") as f:
+        json.dump(convo_w4.tolist(), f)
+    with open(f"./weights/convo_w5.txt", "w") as f:
+        json.dump(convo_w5.tolist(), f)
+    with open(f"./weights/convo_w6.txt", "w") as f:
+        json.dump(convo_w6.tolist(), f)
+    with open(f"./weights/convo_w7.txt", "w") as f:
+        json.dump(convo_w7.tolist(), f)
+    with open(f"./weights/convo_w8.txt", "w") as f:
+        json.dump(convo_w8.tolist(), f)
+
     with open(f"./weights/wh.txt", "w") as f:
         json.dump(wh.tolist(), f)
     with open(f"./weights/bh.txt", "w") as f:
@@ -65,7 +80,7 @@ def saveParams():
         json.dump(wo.tolist(), f)
     with open(f"./weights/bo.txt", "w") as f:
         json.dump(bo.tolist(), f)
-
+saveParams()
 def convolute(img_tensor:torch.tensor, kernel):
     output = f.conv2d(input=img_tensor, weight=kernel, padding=1)
     
