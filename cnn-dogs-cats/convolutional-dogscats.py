@@ -154,7 +154,7 @@ def readImageBatch(indecies):
 def train():
     global batch_size
     for i in range(15000):
-        randomIndecies = [random.randint(1, 12400) for _ in range(batch_size)]
+        randomIndecies = [random.randint(1, 11500) for _ in range(batch_size)]
 
         readImagesRaw = readImageBatch(randomIndecies)
         # img = torch.tensor(readImagesRaw[0], device=device).float().permute(0, 3, 1, 2) # that shit was 10x slower for some reason
@@ -167,7 +167,7 @@ def train():
         loss = F.cross_entropy(logits, ans)
 
         # applying L2 regularization
-        loss += 0.000015 * sum(p.pow(2).sum() for p in params)
+        loss += 0.00003 * sum(p.pow(2).sum() for p in params)
 
         preds = torch.argmax(logits, dim=1)
         acc = (preds == ans).float().mean().item()
@@ -194,25 +194,28 @@ def train():
     getTestLoss()
 
 def getTestLoss():
-    indecies = range(12400, 12500)
+    global batch_size
+    batch_size = 64
+    # indecies = range(11500, 12500)
+    
+    for i in range(11516, 12500, 64):
+        readImagesRaw = readImageBatch(range(i-64, i))
 
-    readImagesRaw = readImageBatch(indecies)
+        # img = torch.tensor(readImagesRaw[0], device=device).float().permute(0, 3, 1, 2) # that shit was 10x slower for some reason
+        img = torch.from_numpy(np.array(readImagesRaw[0])).float().permute(0, 3, 1, 2).to(device) / 255.0 # that shit 10x speed for some fucking reason
+        ans = torch.tensor(readImagesRaw[1], device=device).to(device)
 
-    # img = torch.tensor(readImagesRaw[0], device=device).float().permute(0, 3, 1, 2) # that shit was 10x slower for some reason
-    img = torch.from_numpy(np.array(readImagesRaw[0])).float().permute(0, 3, 1, 2).to(device) / 255.0 # that shit 10x speed for some fucking reason
-    ans = torch.tensor(readImagesRaw[1], device=device).to(device)
+        logits = model(img)
 
-    logits = model(img)
+        # calc loss
+        loss = F.cross_entropy(logits, ans)
 
-    # calc loss
-    loss = F.cross_entropy(logits, ans)
+        # applying L2 regularization
+        loss += 0.000015 * sum(p.pow(2).sum() for p in params)
 
-    # applying L2 regularization
-    loss += 0.000015 * sum(p.pow(2).sum() for p in params)
-
-    preds = torch.argmax(logits, dim=1)
-    acc = (preds == ans).float().mean().item()
-    print(f"Test loss: {loss.item()}, test acc: {acc}")
+        preds = torch.argmax(logits, dim=1)
+        acc = (preds == ans).float().mean().item()
+        print(f"Test loss: {loss.item()}, test acc: {acc}")
 
 def inference(imagesPaths):
     images = []
