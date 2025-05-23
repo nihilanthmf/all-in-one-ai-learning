@@ -10,11 +10,11 @@ import numpy as np
 
 # setting training/inference mode
 toTrain = False
-inferenceImages = ["./cnn-dogs-cats/kitty.jpg", "./cnn-dogs-cats/prianik.jpeg"]
+inferenceImages = []
 
-# for i in range(1, 2):
-#     inferenceImages.append(f"./dogs-vs-cats-redux-kernels-edition/train/cat.{12000+i}.jpg")
-#     inferenceImages.append(f"./dogs-vs-cats-redux-kernels-edition/train/dog.{i}.jpg")
+for i in range(1, 64):
+    inferenceImages.append(f"./dogs-vs-cats-redux-kernels-edition/train/cat.{12000+i}.jpg")
+    inferenceImages.append(f"./dogs-vs-cats-redux-kernels-edition/train/dog.{12000+i}.jpg")
 
 # model setup
 dir = "./dogs-vs-cats-redux-kernels-edition/train"
@@ -234,8 +234,9 @@ def inference(imagesPaths):
 
     probs = softmax(logits).tolist()
 
-    for p in probs:
-        print("cat" if p[0]>p[1] else "dog", f"confidence: {max(p)}")
+    for i in range(len(probs)):
+        p = probs[i]
+        print("cat" if p[0]>p[1] else "dog;", f"confidence: {max(p)};", imagesPaths[i])
 
 # training loop
 if (toTrain):
