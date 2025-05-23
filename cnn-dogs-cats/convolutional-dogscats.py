@@ -10,11 +10,11 @@ import numpy as np
 
 # setting training/inference mode
 toTrain = False
-inferenceImages = []
+inferenceImages = ["./cnn-dogs-cats/prnk.jpeg", "./cnn-dogs-cats/prnk.jpeg"]
 
-for i in range(1, 64):
-    inferenceImages.append(f"./dogs-vs-cats-redux-kernels-edition/train/cat.{12000+i}.jpg")
-    inferenceImages.append(f"./dogs-vs-cats-redux-kernels-edition/train/dog.{12000+i}.jpg")
+# for i in range(1, 64):
+#     inferenceImages.append(f"./dogs-vs-cats-redux-kernels-edition/train/cat.{12000+i}.jpg")
+#     inferenceImages.append(f"./dogs-vs-cats-redux-kernels-edition/train/dog.{12000+i}.jpg")
 
 # model setup
 dir = "./dogs-vs-cats-redux-kernels-edition/train"
