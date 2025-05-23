@@ -9,12 +9,12 @@ from PIL import Image
 import numpy as np
 
 # setting training/inference mode
-toTrain = True
-inferenceImages = []
+toTrain = False
+inferenceImages = ["./cnn-dogs-cats/kitty.jpg", "./cnn-dogs-cats/prianik.jpeg"]
 
-for i in range(1, 33):
-    inferenceImages.append(f"./dogs-vs-cats-redux-kernels-edition/train/cat.{i}.jpg")
-    inferenceImages.append(f"./dogs-vs-cats-redux-kernels-edition/train/dog.{i}.jpg")
+# for i in range(1, 2):
+#     inferenceImages.append(f"./dogs-vs-cats-redux-kernels-edition/train/cat.{12000+i}.jpg")
+#     inferenceImages.append(f"./dogs-vs-cats-redux-kernels-edition/train/dog.{i}.jpg")
 
 # model setup
 dir = "./dogs-vs-cats-redux-kernels-edition/train"
@@ -226,15 +226,22 @@ def inference(imagesPaths):
 
     logits = model(img)
 
-    preds = torch.argmax(logits, dim=1)
+    def softmax(logits):
+        counts = logits.exp()
+        prob = ((counts / counts.sum(1, keepdim=True)) * 1000).round() / 1000
 
-    print(preds)
+        return prob
+
+    probs = softmax(logits).tolist()
+
+    for p in probs:
+        print("cat" if p[0]>p[1] else "dog", f"confidence: {max(p)}")
 
 # training loop
 if (toTrain):
     train()
 else:
-    # batch_size = len(inferenceImages)//2 # this is very questionable
+    batch_size = len(inferenceImages)//2 # this is very questionable
 
     with open(f"./weights/convo_w.txt", "r") as f:
         convo_w = torch.tensor(json.loads(f.read()), requires_grad=True)
