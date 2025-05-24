@@ -9,7 +9,7 @@ from PIL import Image
 import numpy as np
 
 # setting training/inference mode
-toTrain = False
+toTrain = True
 inferenceImages = ["./cnn-dogs-cats/prnk.jpeg", "./cnn-dogs-cats/prnk.jpeg"]
 
 # for i in range(1, 64):
@@ -153,7 +153,7 @@ def readImageBatch(indecies):
 
 def train():
     global batch_size
-    for i in range(15000):
+    for i in range(50000):
         randomIndecies = [random.randint(1, 11500) for _ in range(batch_size)]
 
         readImagesRaw = readImageBatch(randomIndecies)
